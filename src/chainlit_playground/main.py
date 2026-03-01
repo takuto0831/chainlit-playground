@@ -3,10 +3,11 @@ import os
 from chainlit.utils import mount_chainlit
 from fastapi import FastAPI
 
-from chainlit_playground import hello
+from chainlit_playground import hello, auth_demo
 
 APPS: dict[str, str] = {
     "hello": hello.app.__file__,
+    "auth_demo": auth_demo.app.__file__,
 }
 
 

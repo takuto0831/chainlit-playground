@@ -14,3 +14,6 @@ wheels/
 
 # Chainlit files
 .chainlit/
+
+# Local environment variables
+.env
