@@ -19,6 +19,10 @@ def get_app_path() -> str:
             from chainlit_playground import history_demo  # noqa: PLC0415
 
             return history_demo.app.__file__
+        case "demo":
+            from chainlit_playground import demo  # noqa: PLC0415
+
+            return demo.app.__file__
         case _:
             msg = f"Unknown target: {target}"
             raise ValueError(msg)

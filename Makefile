@@ -21,4 +21,4 @@ setup-db:
 	docker compose -f sandbox/postgres/docker-compose.yaml up -d
 
 teardown-db:
-	docker compose -f sandbox/postgres/docker-compose.yaml down
+	docker compose -f sandbox/postgres/docker-compose.yaml stop
