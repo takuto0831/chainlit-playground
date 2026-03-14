@@ -65,9 +65,7 @@ def make_reliability_chart(all_sites: list[dict]) -> go.Figure:
         row_z = [s["reliability"].count("⭐") for s in sources]
         # ソース名を14文字ごとに改行して折り返す
         row_text = [
-            "<br>".join(
-                s["name"][i : i + 14] for i in range(0, len(s["name"]), 14)
-            )
+            "<br>".join(s["name"][i : i + 14] for i in range(0, len(s["name"]), 14))
             + f"<br>{s['reliability']}"
             for s in sources
         ]

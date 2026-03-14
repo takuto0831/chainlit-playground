@@ -9,17 +9,12 @@ def get_app_path() -> str:
 
     target = os.getenv("TARGET", "hello")
     targets = {
-        "hello",
-        "auth_demo",
-        "history_demo",
-        "demo",
-        "step",
-        "step_child",
         "step_child_base",
         "step_child_ui_markdown",
         "step_child_ui_tasklist",
         "step_child_ui_chart",
         "step_child_ui_trivia",
+        "step_child_no_step",
     }
     if target not in targets:
         msg = f"Unknown target: {target}"

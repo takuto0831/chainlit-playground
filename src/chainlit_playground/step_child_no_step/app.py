@@ -1,13 +1,7 @@
-"""Chainlit Step デモ：OpenAI API を使ったリサーチツール
+"""Chainlit リサーチツール：Step 表示なし版
 
 UIの構造：
-  ▼ 🔎 ウェブを調査しています        ← ルートstep
-    ▼ 🔍「基本概念」を調査中          ← トピックstep（OpenAI が生成）
-      ▼ 📄 ソース名                   ← サイトstep（OpenAI が調査）
-      ...
-    ...
-  ▼ ✍️ 情報を集約中                  ← 集約step（OpenAI ストリーミング）
-  [最終回答]
+  [最終回答]  <- ストリーミング表示のみ
 """
 
 import json
@@ -17,9 +11,11 @@ from openai import AsyncOpenAI
 
 client = AsyncOpenAI()
 
+
 # ──────────────────────────────────────────────
 # OpenAI ヘルパー
 # ──────────────────────────────────────────────
+
 
 async def generate_topics(query: str) -> list[str]:
     """クエリからリサーチトピックを3つ生成する。"""
@@ -55,7 +51,6 @@ MAX_SOURCES = 3
 
 async def research_topic(query: str, topic: str) -> list[dict]:
     """web_search_preview で実際にウェブを検索し、ソース2〜3件を返す."""
-    # Step 1: ウェブ検索
     search_response = await client.responses.create(
         model="gpt-4o",
         tools=[{"type": "web_search_preview"}],
@@ -65,7 +60,6 @@ async def research_topic(query: str, topic: str) -> list[dict]:
         ),
     )
 
-    # テキストと引用URLを抽出
     output_text = ""
     url_citations: list[dict] = []
     for item in search_response.output:
@@ -79,7 +73,6 @@ async def research_topic(query: str, topic: str) -> list[dict]:
                         if ann.type == "url_citation"
                     )
 
-    # 重複URLを除去して最大MAX_SOURCES件
     seen: set[str] = set()
     unique_citations = []
     for c in url_citations:
@@ -92,7 +85,7 @@ async def research_topic(query: str, topic: str) -> list[dict]:
     citations_text = "\n".join(f"- {c['title']}: {c['url']}" for c in unique_citations)
     structure_response = await client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=512,
+        max_tokens=2048,
         response_format={"type": "json_object"},
         messages=[
             {
@@ -120,9 +113,11 @@ async def research_topic(query: str, topic: str) -> list[dict]:
     data = json.loads(raw)
     return data["sources"]
 
+
 # ──────────────────────────────────────────────
 # 集約・回答生成（ストリーミング）
 # ──────────────────────────────────────────────
+
 
 async def aggregate(
     query: str, all_findings: list[str], answer_msg: cl.Message
@@ -130,37 +125,31 @@ async def aggregate(
     """調査結果を集約し、answer_msg にストリーミング表示する."""
     findings_text = "\n".join(f"- {f}" for f in all_findings)
 
-    async with cl.Step(name="✍️ 情報を集約中", type="llm", show_input=False) as agg_step:
-        stream = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            max_tokens=4096,
-            stream=True,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "あなたは優秀なリサーチアシスタントです。"
-                        "調査結果を日本語でわかりやすくまとめてください。"
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"以下の調査結果をもとに「{query}」について"
-                        f"詳しくまとめてください。\n\n{findings_text}"
-                    ),
-                },
-            ],
-        )
-        full_response = ""
-        async for chunk in stream:
-            delta = chunk.choices[0].delta.content
-            if delta:
-                full_response += delta
-                await answer_msg.stream_token(delta)
-                await agg_step.stream_token(delta)
-
-        agg_step.output = full_response
+    stream = await client.chat.completions.create(
+        model="gpt-4o-mini",
+        max_tokens=4096,
+        stream=True,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "あなたは優秀なリサーチアシスタントです。"
+                    "調査結果を日本語でわかりやすくまとめてください。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"以下の調査結果をもとに「{query}」について"
+                    f"詳しくまとめてください。\n\n{findings_text}"
+                ),
+            },
+        ],
+    )
+    async for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            await answer_msg.stream_token(delta)
 
 
 # ──────────────────────────────────────────────
@@ -173,33 +162,12 @@ async def main(message: cl.Message) -> None:
     query = message.content
     all_findings: list[str] = []
 
-    async with cl.Step(name="🔎 ウェブを調査しています", type="tool") as root_step:
-        root_step.input = query
+    topics = await generate_topics(query)
 
-        topics = await generate_topics(query)
-
-        for topic in topics:
-            async with cl.Step(
-                name=f"🔍「{topic}」を調査中", type="tool"
-            ) as topic_step:
-                topic_step.input = f"「{topic}」の観点で調査"
-
-                sites = await research_topic(query, topic)
-
-                for site in sites:
-                    async with cl.Step(
-                        name=f"📄 {site['name']}", type="retrieval"
-                    ) as site_step:
-                        site_step.input = site["url"]
-                        site_step.output = site["summary"]
-
-                    all_findings.append(
-                        f"**[{topic}｜{site['name']}]** {site['summary']}"
-                    )
-
-                topic_step.output = f"{len(sites)} 件のソースを確認しました"
-
-        root_step.output = f"合計 {len(all_findings)} 件のソースを調査しました"
+    for topic in topics:
+        sites = await research_topic(query, topic)
+        for site in sites:
+            all_findings.extend(f"**[{topic}｜{site['name']}]** {site['summary']}")
 
     answer_msg = cl.Message(content="")
     await answer_msg.send()
