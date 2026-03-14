@@ -15,7 +15,7 @@ lint:
 	uv run ty check $(SOURCE)
 
 run:
-	uv run uvicorn chainlit_playground.main:app --reload --factory --host localhost --port 8000
+	uv run uvicorn chainlit_playground.main:app --reload --factory --host localhost --port 8000 --env-file .env
 
 setup-db:
 	docker compose -f sandbox/postgres/docker-compose.yaml up -d

@@ -5,39 +5,28 @@ from fastapi import FastAPI
 
 
 def get_app_path() -> str:
+    import importlib  # noqa: PLC0415
+
     target = os.getenv("TARGET", "hello")
-    match target:
-        case "hello":
-            from chainlit_playground import hello  # noqa: PLC0415
-
-            return hello.app.__file__
-        case "auth_demo":
-            from chainlit_playground import auth_demo  # noqa: PLC0415
-
-            return auth_demo.app.__file__
-        case "history_demo":
-            from chainlit_playground import history_demo  # noqa: PLC0415
-
-            return history_demo.app.__file__
-        case "demo":
-            from chainlit_playground import demo  # noqa: PLC0415
-
-            return demo.app.__file__
-        case "step":
-            from chainlit_playground import step  # noqa: PLC0415
-
-            return step.app.__file__
-        case "step_child":
-            from chainlit_playground import step_child  # noqa: PLC0415
-            
-            return step_child.app.__file__
-        case "step_childv2":
-            from chainlit_playground import step_childv2  # noqa: PLC0415
-            
-            return step_childv2.app.__file__
-        case _:
-            msg = f"Unknown target: {target}"
-            raise ValueError(msg)
+    targets = {
+        "hello",
+        "auth_demo",
+        "history_demo",
+        "demo",
+        "step",
+        "step_child",
+        "step_child_base",
+        "step_child_ui_markdown",
+        "step_child_ui_tasklist",
+        "step_child_ui_chart",
+        "step_child_ui_trivia",
+    }
+    if target not in targets:
+        msg = f"Unknown target: {target}"
+        raise ValueError(msg)
+    module = importlib.import_module(f"chainlit_playground.{target}.app")
+    assert module.__file__ is not None
+    return module.__file__
 
 
 def app() -> FastAPI:

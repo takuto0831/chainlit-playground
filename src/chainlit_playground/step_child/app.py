@@ -1,5 +1,4 @@
-"""
-Chainlit Step デモ：複数トピックを親子stepで並列調査する
+"""Chainlit Step デモ：複数トピックを親子stepで並列調査する
 
 UIの構造：
   ▼ 🧭 調査計画を立てています
@@ -14,6 +13,7 @@ UIの構造：
 """
 
 import asyncio
+
 import chainlit as cl
 
 # ──────────────────────────────────────────────
@@ -71,7 +71,7 @@ TOPIC_SITES: dict[str, list[dict]] = {
 
 
 @cl.step(name="🧭 調査計画を立てています", type="tool", show_input=False)
-async def plan_topics(query: str) -> list[str]:
+async def plan_topics(_query: str) -> list[str]:
     """クエリを複数のトピックに分解する"""
     await asyncio.sleep(0.6)
     topics = list(TOPIC_SITES.keys())  # 実際はLLMでトピックを生成する
@@ -85,8 +85,7 @@ async def plan_topics(query: str) -> list[str]:
 
 
 async def research_topic(query: str, topic: str) -> list[str]:
-    """
-    1つのトピックを複数サイトで調査する。
+    """1つのトピックを複数サイトで調査する。
 
     async with cl.Step() を2段ネストすることで
     「親：トピック調査」→「子：各サイト確認」の階層UIを作る。
@@ -100,7 +99,9 @@ async def research_topic(query: str, topic: str) -> list[str]:
 
         for site in sites:
             # 子 step：サイト単位（親の with ブロック内で作ると自動的に子になる）
-            async with cl.Step(name=f"📄 {site['name']}", type="retrieval") as child_step:
+            async with cl.Step(
+                name=f"📄 {site['name']}", type="retrieval"
+            ) as child_step:
                 child_step.input = site["domain"]
                 await asyncio.sleep(0.5)  # 実際はスクレイピング or RAG検索
                 child_step.output = site["summary"]
@@ -119,15 +120,15 @@ async def research_topic(query: str, topic: str) -> list[str]:
 
 @cl.step(name="✍️ 情報を集約中", type="llm", show_input=False)
 async def aggregate(query: str, all_findings: list[str]) -> str:
-    """
-    全トピックの調査結果を集約してストリーミング表示する。
+    """全トピックの調査結果を集約してストリーミング表示する。
 
     cl.context.current_step で実行中ステップを取得し
     stream_token() で1文字ずつUIに流す。
     """
     findings_text = "\n".join(f"- {f}" for f in all_findings)
     answer = (
-        f"「{query}」について、{len(all_findings)} 件のソースから情報を収集しました。\n\n"
+        f"「{query}」について、"
+        f"{len(all_findings)} 件のソースから情報を収集しました。\n\n"
         "## 調査結果のまとめ\n\n"
         f"{findings_text}\n\n"
         "---\n"
