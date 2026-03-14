@@ -20,20 +20,10 @@ make run TARGET=hello       # hello アプリを実行
 
 ### 環境変数の設定
 
-環境変数の設定が必要な場合は：
+- .env.example をコピーして .envを作成してください。
+- OPENAI_API_KEY の値をご自身で取得した API Keyに変更してください。.envは github に commit/pushしないよう注意してください。
 
-1. `.env.example` をテンプレートとして参考にしてください
-2. プロジェクトルートに `.env` ファイルを作成してください
-3. 必要な環境変数を設定してください
-
-例：認証機能を使用する場合は、以下のコマンドでシークレットを生成し、`.env` に設定してください。
-
-```bash
-chainlit create-secret
 ```
+OPENAI_API_KEY=your_openai_api_key_here
 
-その後、生成されたシークレットを `.env` に設定：
-
-```dotenv
-CHAINLIT_AUTH_SECRET="生成されたシークレット"
 ```
