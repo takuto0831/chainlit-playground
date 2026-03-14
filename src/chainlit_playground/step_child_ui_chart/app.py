@@ -63,7 +63,14 @@ def make_reliability_chart(all_sites: list[dict]) -> go.Figure:
     for topic in topics:
         sources = topic_sources[topic]
         row_z = [s["reliability"].count("⭐") for s in sources]
-        row_text = [f"{s['name']}<br>{s['reliability']}" for s in sources]
+        # ソース名を14文字ごとに改行して折り返す
+        row_text = [
+            "<br>".join(
+                s["name"][i : i + 14] for i in range(0, len(s["name"]), 14)
+            )
+            + f"<br>{s['reliability']}"
+            for s in sources
+        ]
         # 列数を揃えるために None で埋める
         pad = max_sources - len(sources)
         z.append(row_z + [None] * pad)
@@ -76,6 +83,7 @@ def make_reliability_chart(all_sites: list[dict]) -> go.Figure:
             y=topics,
             text=text,
             texttemplate="%{text}",
+            textfont={"size": 10},
             colorscale="YlOrRd",
             zmin=1,
             zmax=5,
@@ -86,7 +94,7 @@ def make_reliability_chart(all_sites: list[dict]) -> go.Figure:
         title="トピック別 情報ソース 信頼度ヒートマップ",
         xaxis_title="ソース",
         yaxis_title="トピック",
-        height=80 + 100 * len(topics),
+        height=80 + 160 * len(topics),
         margin={"t": 60, "b": 60},
     )
     return fig
@@ -168,7 +176,7 @@ async def research_topic(query: str, topic: str) -> list[dict]:
     citations_text = "\n".join(f"- {c['title']}: {c['url']}" for c in unique_citations)
     structure_response = await client.chat.completions.create(
         model="gpt-4o-mini",
-        max_tokens=512,
+        max_tokens=1024,
         response_format={"type": "json_object"},
         messages=[
             {
